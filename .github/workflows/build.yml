@@ -1,0 +1,57 @@
+name: Build PrintBoy
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pull toolchain
+        run: |
+          # TODO : pin par sha256 digest pour reproductibilite
+          docker pull aemiii91/miyoomini-toolchain:latest
+
+      - name: Build
+        run: make with-toolchain
+
+      - name: Stage release tree
+        run: |
+          mkdir -p release/PrintBoy/App/PrintBoy/bin
+          cp -r App/PrintBoy/* release/PrintBoy/App/PrintBoy/
+          cp build/printboy release/PrintBoy/App/PrintBoy/bin/
+          cp -r Icons release/PrintBoy/
+          cp README.md INSTALL.md BUILD.md SECURITY.md LICENSE NOTICE.md CHANGELOG.md \
+             release/PrintBoy/
+          cp -r scripts preview release/PrintBoy/
+          chmod +x release/PrintBoy/App/PrintBoy/launch.sh
+          chmod +x release/PrintBoy/App/PrintBoy/bin/printboy
+
+      - name: Zip + checksum
+        run: |
+          cd release
+          VERSION="${GITHUB_REF_NAME:-dev}"
+          zip -r "PrintBoy_${VERSION}.zip" PrintBoy/
+          sha256sum "PrintBoy_${VERSION}.zip" > "PrintBoy_${VERSION}.zip.sha256"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PrintBoy-release
+          path: |
+            release/PrintBoy_*.zip
+            release/PrintBoy_*.zip.sha256
+
+      - name: GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release/PrintBoy_*.zip
+            release/PrintBoy_*.zip.sha256
+          generate_release_notes: true

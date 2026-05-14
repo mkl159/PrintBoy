@@ -1,0 +1,11 @@
+# PrintBoy - exemple de config Prusa-Link
+#
+# Copie ce fichier en 'printer.cfg' dans le meme dossier puis edite :
+#   - 'url' : http://<ip-de-ta-prusa> ou http://prusa.local
+#   - 'api_key' : visible sur l'imprimante dans
+#                 Settings > Network > Prusa Link > API key
+
+url = http://192.168.1.42
+api_key = REPLACE-ME-WITH-PRUSA-API-KEY
+poll_interval_s = 2
+jog_step_mm = 10

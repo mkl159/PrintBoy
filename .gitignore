@@ -1,0 +1,32 @@
+# Build artefacts
+build/
+dist/
+release/
+*.o
+*.obj
+*.exe
+*.zip
+*.tar.gz
+
+# Binaire compile (livre par release)
+App/PrintBoy/bin/printboy
+
+# IMPORTANT : ne jamais commiter la cle API
+App/PrintBoy/printer.cfg
+**/printer.cfg
+**/*.token
+**/.token
+**/.env*
+**/credentials*
+
+# Logs
+*.log
+Saves/PrintBoy/
+
+# Editeurs
+.vscode/
+.idea/
+*~
+.*.swp
+.DS_Store
+Thumbs.db

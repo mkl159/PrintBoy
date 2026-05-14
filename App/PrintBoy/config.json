@@ -1,0 +1,6 @@
+{
+    "label": "PrintBoy",
+    "icon": "/mnt/SDCARD/App/PrintBoy/res/printboy_icon.png",
+    "launch": "launch.sh",
+    "description": "Controle ta Prusa 3D depuis ton Miyoo Mini Plus en WiFi (Prusa-Link)"
+}
