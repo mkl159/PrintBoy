@@ -75,10 +75,10 @@ void ui_show_message(ui_t *ui, const char *fmt, ...)
     ui->status_message_until = SDL_GetTicks() + 3000;
 }
 
-void ui_text(ui_t *ui, TTF_Font *f, const char *s, int x, int y, SDL_Color c)
+void ui_text(ui_t *ui, TTF_Font *f, const char *s, int x, int y, SDL_Color color)
 {
     if (!s || !*s) return;
-    SDL_Surface *surf = TTF_RenderUTF8_Blended(f, s, c);
+    SDL_Surface *surf = TTF_RenderUTF8_Blended(f, s, color);
     if (!surf) return;
     SDL_Texture *tex = SDL_CreateTextureFromSurface(ui->renderer, surf);
     if (tex) {
@@ -90,12 +90,12 @@ void ui_text(ui_t *ui, TTF_Font *f, const char *s, int x, int y, SDL_Color c)
 }
 
 void ui_text_center(ui_t *ui, TTF_Font *f, const char *s, int y, int w,
-                    SDL_Color c)
+                    SDL_Color color)
 {
     if (!s || !*s) return;
     int tw = 0, th = 0;
     TTF_SizeUTF8(f, s, &tw, &th);
-    ui_text(ui, f, s, (w - tw) / 2, y, c);
+    ui_text(ui, f, s, (w - tw) / 2, y, color);
     (void)th;
 }
 

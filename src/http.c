@@ -14,7 +14,7 @@
 
 #define MAX_BODY_BYTES (4 * 1024 * 1024)  /* 4 MiB : assez pour JPEG webcam */
 
-static size_t write_cb(void *ptr, size_t size, size_t nmemb, void *userdata)
+static size_t write_cb(const void *ptr, size_t size, size_t nmemb, void *userdata)
 {
     http_response_t *r = (http_response_t *)userdata;
     size_t add = size * nmemb;

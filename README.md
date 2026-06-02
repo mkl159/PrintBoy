@@ -5,8 +5,10 @@
 [![WiFi required](https://img.shields.io/badge/WiFi-required-blue?style=for-the-badge)](https://github.com/OnionUI/Onion)
 [![License MIT](https://img.shields.io/badge/license-MIT-purple?style=for-the-badge)](LICENSE)
 
-> 🛰️ **Pilote ta Prusa 3D depuis ta Miyoo Mini Plus, en WiFi local.**
-> Surveille la progression, regarde la webcam, mets en pause, déplace la tête, change les températures — tout depuis ta console retro de poche.
+> 🛰️ **Ta Prusa dans ta poche, pilotée à la manette.**
+> Surveille la progression, regarde la webcam, mets en pause, déplace la tête, préchauffe et change les températures — le tout depuis ta Miyoo Mini Plus, en WiFi local.
+
+> 🎮 *Le nom est un clin d'œil au **Game Boy Printer** : ici, c'est la console qui pilote l'imprimante.*
 
 <p align="center"><img src="preview/printboy_icon_256.png" width="160" alt="PrintBoy"></p>
 
@@ -34,15 +36,16 @@ PrintBoy est une **app Onion** pour Miyoo Mini Plus qui parle à l'API REST de *
 
 - 📊 **Dashboard temps réel** : état (IDLE / PRINTING / PAUSED / ERROR), températures buse + plateau, position X/Y/Z, ventilos, flow, speed
 - 📈 **Progression d'impression** : nom du fichier, barre %, temps restant, temps écoulé
-- 📷 **Webcam** : snapshot JPEG via `/api/v1/cameras/{id}/snap`, rafraîchi auto toutes les 5 s
+- 📷 **Webcam** : snapshot JPEG via `/api/v1/cameras/{id}/snap`, rafraîchi auto toutes les 5 s, avec **découverte auto de la caméra** (`/api/v1/cameras`) si le status n'en expose pas
 - ⏸️ **Pause / Reprendre / Annuler** un job
 - 🏠 **Home XYZ** d'un bouton
-- 🌡️ **Régler les températures** buse et plateau par paliers de 5 °C
-- 🕹️ **Jog manuel** XYZ avec pas 1 / 10 / 50 mm
+- 🌡️ **Régler les températures** buse **et** plateau par paliers de ±5 °C
+- 🔥 **Préchauffage PLA** (215/60) en un appui, et **Refroidir tout** (buse + plateau à 0 °C)
+- 🕹️ **Jog manuel** XYZ avec pas 1 / 10 / 50 mm — le pas par défaut est repris depuis `printer.cfg`
 - 🔐 **Sauvegarde** locale de l'URL + clé API (dans `printer.cfg`)
 - 🚪 **Déconnexion** propre depuis l'écran Settings (efface URL + clé)
 - 📶 **Détection WiFi off** : message clair au lancement si tu as oublié de l'activer
-- 🛠️ Stack : C + libcurl + cJSON + SDL2 — ~1500 lignes de code lisible
+- 🛠️ Stack : C + libcurl + cJSON + SDL2 — code compact et lisible
 
 ---
 
@@ -62,7 +65,7 @@ PrintBoy est une **app Onion** pour Miyoo Mini Plus qui parle à l'API REST de *
 
 Voir [INSTALL.md](INSTALL.md). Résumé :
 
-1. 📥 Télécharge la release `PrintBoy_v0.1.0.zip` depuis l'onglet Releases.
+1. 📥 Télécharge la dernière release `PrintBoy_vX.Y.Z.zip` depuis l'onglet Releases.
 2. 🔌 Branche la SD du Miyoo sur le PC.
 3. 📂 Copie le dossier `App/PrintBoy/` du zip vers `<SD>/App/PrintBoy/`.
 4. 🖼️ Copie `Icons/Default/app/printboy.png` vers `<SD>/Icons/Default/app/`.
@@ -98,8 +101,9 @@ Voir [INSTALL.md](INSTALL.md). Résumé :
 | `PUT /api/v1/job/{id}/resume` | Reprendre |
 | `DELETE /api/v1/job/{id}` | Annuler |
 | `POST /api/printer/printhead` | Jog XYZ + Home |
-| `POST /api/printer/tool` | Cible buse |
+| `POST /api/printer/tool` | Cible buse (températures + préchauffage + refroidissement) |
 | `POST /api/printer/bed` | Cible plateau |
+| `GET /api/v1/cameras` | Découverte de la caméra (fallback si le status n'en liste pas) |
 | `GET /api/v1/cameras/{id}/snap` | Snapshot webcam (JPEG) |
 
 Auth : header `X-Api-Key: <clé>` sur toutes les requêtes.

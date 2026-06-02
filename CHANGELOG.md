@@ -1,5 +1,20 @@
 # 📝 Changelog
 
+## [0.2.0] - 2026-06-02
+
+### ✨ Ajouts
+
+- 🔥 Écran Controls : préchauffage **PLA** (215/60) et **Refroidir tout** (buse + plateau à 0 °C) en un appui
+- 🌡️ Réglage du **plateau −5 °C** (symétrie avec buse ±5 et plateau +5)
+- 📷 **Découverte automatique de la caméra** via `GET /api/v1/cameras` quand `/api/v1/status` n'expose pas de bloc `camera`
+- 🕹️ Le pas par défaut du Jog est désormais repris depuis `jog_step_mm` de `printer.cfg`
+
+### 🐛 Corrections
+
+- 🛑 **Webcam : plus de tempête de requêtes**. En cas d'échec (pas de caméra, snap KO, décodage JPEG raté), l'horodatage n'était pas mis à jour : `refresh()` était rappelé à chaque frame (~30 FPS), enchaînant des requêtes HTTP bloquantes qui gelaient l'UI et matraquaient l'imprimante. L'essai est maintenant horodaté dès le début → throttle 5 s respecté même en échec.
+- 🧹 **Lint CI propre** : suppression des avertissements `cppcheck` (`--enable=warning,style --error-exitcode=1`) qui faisaient échouer le job lint (variables `const`, condition morte, ternaire dupliqué).
+- 🩹 `prusa_api.h` inclut `<stddef.h>` (utilisé pour `size_t`).
+
 ## [0.1.0] - 2026-05-14
 
 ### 🎉 Initial release

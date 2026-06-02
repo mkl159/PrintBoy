@@ -1,6 +1,7 @@
 #include "config.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 
@@ -24,13 +25,13 @@ bool pb_config_load(const char *path, pb_config_t *out)
 
     char line[512];
     while (fgets(line, sizeof(line), fp)) {
-        char *p = line;
-        if (*p == '#' || *p == '\n' || *p == '\0') continue;
+        char *p = trim(line);
+        if (*p == '#' || *p == '\0') continue;
         char *eq = strchr(p, '=');
         if (!eq) continue;
         *eq = '\0';
-        char *key = trim(p);
-        char *val = trim(eq + 1);
+        const char *key = trim(p);
+        const char *val = trim(eq + 1);
         if (!strcmp(key, "url")) {
             snprintf(out->url, sizeof(out->url), "%s", val);
         } else if (!strcmp(key, "api_key")) {

@@ -63,7 +63,7 @@ void screen_settings_render(ui_t *ui)
 
     /* Deconnexion (efface url + cle) */
     SDL_Color c4 = (ui->cursor == 3) ? C_ERR : C_PANEL;
-    SDL_Color t4 = (ui->cursor == 3) ? C_FG : C_FG;
+    SDL_Color t4 = C_FG;
     ui_box(ui, 330, 280, 290, 44, c4);
     ui_text(ui, ui->font_medium, "Deconnexion (A)", 340, 288, t4);
 
@@ -79,7 +79,7 @@ void screen_settings_render(ui_t *ui)
         20, 410, C_DIM);
 }
 
-static void save(ui_t *ui)
+static void save(const ui_t *ui)
 {
     pb_config_save("/mnt/SDCARD/App/PrintBoy/printer.cfg", ui->cfg);
 }

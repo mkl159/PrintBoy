@@ -14,10 +14,26 @@
 static SDL_Texture *cached_tex = NULL;
 static Uint32 last_fetch_ms = 0;
 static char last_error[128] = "";
+static char cam_id[64] = "";
 
 static void refresh(ui_t *ui)
 {
-    if (!ui->status.has_camera) {
+    /* IMPORTANT : on horodate l'essai DES LE DEBUT, y compris en cas
+     * d'echec. Sinon les "return" prematures ci-dessous laissent
+     * last_fetch_ms inchange et screen_webcam_render() rappellerait
+     * refresh() a chaque frame (30 FPS) -> requetes HTTP bloquantes en
+     * rafale qui gelent l'UI et matraquent l'imprimante. */
+    last_fetch_ms = SDL_GetTicks();
+
+    /* L'id camera vient du bloc "camera" de /api/v1/status si present,
+     * sinon on interroge /api/v1/cameras (fallback documente). */
+    if (ui->status.has_camera && ui->status.camera_id[0]) {
+        snprintf(cam_id, sizeof(cam_id), "%s", ui->status.camera_id);
+    } else if (cam_id[0] == '\0') {
+        prusa_get_cameras(ui->cfg->url, ui->cfg->api_key,
+                          cam_id, sizeof(cam_id));
+    }
+    if (cam_id[0] == '\0') {
         snprintf(last_error, sizeof(last_error),
                  "Aucune camera detectee sur l'imprimante.");
         return;
@@ -25,9 +41,9 @@ static void refresh(ui_t *ui)
     unsigned char *jpeg = NULL;
     size_t jpeg_size = 0;
     if (!prusa_get_snapshot(ui->cfg->url, ui->cfg->api_key,
-                            ui->status.camera_id, &jpeg, &jpeg_size)) {
+                            cam_id, &jpeg, &jpeg_size)) {
         snprintf(last_error, sizeof(last_error),
-                 "Echec snap (cam=%s)", ui->status.camera_id);
+                 "Echec snap (cam=%s)", cam_id);
         return;
     }
     SDL_RWops *rw = SDL_RWFromMem(jpeg, (int)jpeg_size);

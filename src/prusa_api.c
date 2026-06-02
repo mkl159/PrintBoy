@@ -122,7 +122,7 @@ bool prusa_get_status(const char *url, const char *key, prusa_status_t *out)
         out->progress        = json_float(job, "progress", 0);
         out->time_remaining_s = json_long(job, "time_remaining", 0);
         out->time_printing_s  = json_long(job, "time_printing", 0);
-        cJSON *file = cJSON_GetObjectItem(job, "file");
+        const cJSON *file = cJSON_GetObjectItem(job, "file");
         if (file) {
             json_string(file, "display_name", out->job_filename,
                         sizeof(out->job_filename), "");
@@ -220,6 +220,58 @@ bool prusa_set_bed(const char *url, const char *key, int target_c)
     bool ok = (r.http_code >= 200 && r.http_code < 300);
     http_response_free(&r);
     return ok;
+}
+
+bool prusa_get_cameras(const char *url, const char *key,
+                       char *out_id, size_t out_id_sz)
+{
+    if (out_id && out_id_sz) out_id[0] = '\0';
+
+    http_response_t r = http_get(url, "/api/v1/cameras", key);
+    if (r.http_code != 200) {
+        http_response_free(&r);
+        return false;
+    }
+    cJSON *root = cJSON_Parse(r.data ? r.data : "");
+    http_response_free(&r);
+    if (!root) return false;
+
+    /* Prusa-Link a expose plusieurs formes selon les versions : un tableau
+     * a la racine, ou {"camera_list":[...]}, ou {"cameras":[...]}. On gere
+     * les trois. Chaque entree a "camera_id" (ou "id") et parfois "connected"
+     * / "registered". On prend la premiere camera connectee, sinon la
+     * premiere tout court. */
+    cJSON *list = root;
+    if (!cJSON_IsArray(list)) {
+        list = cJSON_GetObjectItem(root, "camera_list");
+        if (!cJSON_IsArray(list)) list = cJSON_GetObjectItem(root, "cameras");
+    }
+
+    bool found = false;
+    char first_id[64] = "";
+    if (cJSON_IsArray(list)) {
+        cJSON *cam = NULL;
+        cJSON_ArrayForEach(cam, list) {
+            char id[64] = "";
+            json_string(cam, "camera_id", id, sizeof(id), "");
+            if (id[0] == '\0') json_string(cam, "id", id, sizeof(id), "");
+            if (id[0] == '\0') continue;
+            if (first_id[0] == '\0')
+                snprintf(first_id, sizeof(first_id), "%s", id);
+            cJSON *conn = cJSON_GetObjectItem(cam, "connected");
+            if (conn && cJSON_IsBool(conn) && !cJSON_IsTrue(conn)) continue;
+            snprintf(out_id, out_id_sz, "%s", id);
+            found = true;
+            break;
+        }
+    }
+    if (!found && first_id[0] != '\0') {
+        snprintf(out_id, out_id_sz, "%s", first_id);
+        found = true;
+    }
+
+    cJSON_Delete(root);
+    return found;
 }
 
 bool prusa_get_snapshot(const char *url, const char *key, const char *cam_id,
