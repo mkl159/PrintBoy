@@ -38,6 +38,17 @@ typedef struct {
 
     prusa_status_t status;
     Uint32 last_poll_ms;
+    Uint32 last_status_ms;     /* dernier status recu (0 = jamais) */
+
+    /* Polling asynchrone : le GET /api/v1/status (bloquant jusqu'a 10s
+     * sur timeout) tourne dans un thread dedie pour ne jamais geler l'UI.
+     * poll_mutex protege poll_status/poll_fresh/poll_quit + les chaines
+     * de cfg (url, api_key) lues par le thread. */
+    SDL_Thread *poll_thread;   /* NULL = fallback polling synchrone */
+    SDL_mutex  *poll_mutex;
+    bool        poll_quit;
+    bool        poll_fresh;
+    prusa_status_t poll_status;
 
     pb_config_t *cfg;
     char status_message[128];  /* affiche dans le footer pendant 3s */
@@ -56,6 +67,11 @@ bool ui_handle_event(ui_t *ui, const SDL_Event *e);
 
 /* Polling de l'API selon cfg->poll_interval_s. */
 void ui_tick(ui_t *ui);
+
+/* A prendre avant de modifier cfg->url / cfg->api_key (le thread de
+ * polling les lit). Les ecrans qui editent la config doivent wrapper. */
+void ui_cfg_lock(ui_t *ui);
+void ui_cfg_unlock(ui_t *ui);
 
 /* Helpers exposes aux ecrans : */
 void ui_text(ui_t *ui, TTF_Font *f, const char *s, int x, int y,

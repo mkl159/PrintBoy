@@ -1,20 +1,41 @@
 /* Ecran 3 : Jog XYZ. */
 #include "screens.h"
 
+#include <math.h>
 #include <stdio.h>
 
-static int jog_step_idx = 1;  /* 0:1mm, 1:10mm, 2:50mm */
+static int jog_step_idx = -1;  /* -1 = a initialiser depuis la config */
 static const int steps[3] = {1, 10, 50};
+
+/* Choisit l'index de pas le plus proche du defaut configure (jog_step_mm). */
+static void ensure_step_init(const ui_t *ui)
+{
+    if (jog_step_idx >= 0) return;
+    int want = ui->cfg->jog_step_mm;
+    int best = 0, best_d = 1000000;
+    for (int i = 0; i < 3; i++) {
+        int d = steps[i] > want ? steps[i] - want : want - steps[i];
+        if (d < best_d) { best_d = d; best = i; }
+    }
+    jog_step_idx = best;
+}
 
 void screen_jog_render(ui_t *ui)
 {
+    ensure_step_init(ui);
     ui_text_center(ui, ui->font_medium, "JOG (manuel)", 40, 640, C_ACCENT);
 
     /* Position courante */
     const prusa_status_t *s = &ui->status;
     char buf[96];
-    snprintf(buf, sizeof(buf), "X %.1f   Y %.1f   Z %.2f",
-             s->axis_x, s->axis_y, s->axis_z);
+    /* Prusa-Link ne rapporte souvent pas X/Y (seulement Z) : afficher
+     * "--" plutot que "nan". */
+    if (isnan(s->axis_x) || isnan(s->axis_y)) {
+        snprintf(buf, sizeof(buf), "X --   Y --   Z %.2f", s->axis_z);
+    } else {
+        snprintf(buf, sizeof(buf), "X %.1f   Y %.1f   Z %.2f",
+                 s->axis_x, s->axis_y, s->axis_z);
+    }
     ui_text_center(ui, ui->font_medium, buf, 80, 640, C_FG);
 
     /* Pas */
@@ -56,6 +77,7 @@ static void do_jog(ui_t *ui, char axis, int sign)
 bool screen_jog_event(ui_t *ui, const SDL_Event *e)
 {
     if (e->type != SDL_KEYDOWN) return true;
+    ensure_step_init(ui);
     switch (e->key.keysym.sym) {
         case SDLK_LEFT:  do_jog(ui, 'X', -1); break;
         case SDLK_RIGHT: do_jog(ui, 'X', +1); break;

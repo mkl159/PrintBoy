@@ -16,6 +16,7 @@
 #define PRINTBOY_PRUSA_API_H
 
 #include <stdbool.h>
+#include <stddef.h>
 
 typedef enum {
     PRUSA_STATE_UNKNOWN = 0,
@@ -76,6 +77,12 @@ bool prusa_home_all  (const char *url, const char *key);
 /* Temperatures. 0 pour eteindre. */
 bool prusa_set_nozzle(const char *url, const char *key, int target_c);
 bool prusa_set_bed   (const char *url, const char *key, int target_c);
+
+/* Decouverte camera : GET /api/v1/cameras. Ecrit l'id de la premiere
+ * camera connectee dans out_id. Renvoie false si aucune. Sert de fallback
+ * quand /api/v1/status n'expose pas de bloc "camera". */
+bool prusa_get_cameras(const char *url, const char *key,
+                       char *out_id, size_t out_id_sz);
 
 /* Webcam : telecharge un JPEG dans *out_jpeg / *out_size (malloc'd).
  * Renvoie false si la camera n'est pas dispo. */

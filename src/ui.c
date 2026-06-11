@@ -17,6 +17,62 @@ const SDL_Color C_WARN   = { 245, 200,  60, 255};
 const SDL_Color C_ERR    = { 230,  80,  80, 255};
 const SDL_Color C_PANEL  = {  32,  36,  48, 255};
 
+/* Thread de polling : boucle GET /api/v1/status -> copie le resultat dans
+ * ui->poll_status sous mutex. Le thread UI recupere la copie dans ui_tick().
+ * Les requetes bloquantes (jusqu'a 10s de timeout) ne touchent donc jamais
+ * la boucle de rendu. */
+static int poll_thread_fn(void *arg)
+{
+    ui_t *ui = (ui_t *)arg;
+    for (;;) {
+        char url[256], key[128];
+        int interval_s;
+        bool quit;
+
+        SDL_LockMutex(ui->poll_mutex);
+        quit = ui->poll_quit;
+        snprintf(url, sizeof(url), "%s", ui->cfg->url);
+        snprintf(key, sizeof(key), "%s", ui->cfg->api_key);
+        interval_s = ui->cfg->poll_interval_s;
+        SDL_UnlockMutex(ui->poll_mutex);
+        if (quit) break;
+
+        prusa_status_t st;
+        prusa_get_status(url, key, &st);
+
+        SDL_LockMutex(ui->poll_mutex);
+        ui->poll_status = st;
+        ui->poll_fresh = true;
+        quit = ui->poll_quit;
+        SDL_UnlockMutex(ui->poll_mutex);
+        if (quit) break;
+
+        /* Attente par petits pas pour reagir vite a poll_quit. */
+        int ms = interval_s * 1000;
+        if (ms < 500) ms = 500;
+        while (ms > 0) {
+            SDL_LockMutex(ui->poll_mutex);
+            quit = ui->poll_quit;
+            SDL_UnlockMutex(ui->poll_mutex);
+            if (quit) return 0;
+            int chunk = (ms > 200) ? 200 : ms;
+            SDL_Delay(chunk);
+            ms -= chunk;
+        }
+    }
+    return 0;
+}
+
+void ui_cfg_lock(ui_t *ui)
+{
+    if (ui->poll_mutex) SDL_LockMutex(ui->poll_mutex);
+}
+
+void ui_cfg_unlock(ui_t *ui)
+{
+    if (ui->poll_mutex) SDL_UnlockMutex(ui->poll_mutex);
+}
+
 static TTF_Font *load_font(int size)
 {
     /* OnionOS embarque DejaVuSans dans /mnt/SDCARD/.tmp_update/res/fonts/.
@@ -52,11 +108,31 @@ bool ui_init(ui_t *ui, pb_config_t *cfg)
      * SDL2 capture les deux. Pour simplicite on s'appuie sur les keysym. */
     SDL_GameControllerEventState(SDL_ENABLE);
 
+    /* Polling asynchrone. Si la creation echoue, ui_tick() retombe sur
+     * un polling synchrone (UI peut geler sur timeout, mais fonctionnel). */
+    ui->poll_mutex = SDL_CreateMutex();
+    if (ui->poll_mutex) {
+        ui->poll_thread = SDL_CreateThread(poll_thread_fn, "pb_poll", ui);
+    }
+
     return true;
 }
 
 void ui_quit(ui_t *ui)
 {
+    if (ui->poll_thread) {
+        SDL_LockMutex(ui->poll_mutex);
+        ui->poll_quit = true;
+        SDL_UnlockMutex(ui->poll_mutex);
+        /* Peut attendre la fin d'une requete en cours (max ~10s de
+         * timeout libcurl). On attend pour pouvoir liberer curl proprement. */
+        SDL_WaitThread(ui->poll_thread, NULL);
+        ui->poll_thread = NULL;
+    }
+    if (ui->poll_mutex) {
+        SDL_DestroyMutex(ui->poll_mutex);
+        ui->poll_mutex = NULL;
+    }
     if (ui->font_small)  TTF_CloseFont(ui->font_small);
     if (ui->font_medium) TTF_CloseFont(ui->font_medium);
     if (ui->font_large)  TTF_CloseFont(ui->font_large);
@@ -75,10 +151,10 @@ void ui_show_message(ui_t *ui, const char *fmt, ...)
     ui->status_message_until = SDL_GetTicks() + 3000;
 }
 
-void ui_text(ui_t *ui, TTF_Font *f, const char *s, int x, int y, SDL_Color c)
+void ui_text(ui_t *ui, TTF_Font *f, const char *s, int x, int y, SDL_Color color)
 {
     if (!s || !*s) return;
-    SDL_Surface *surf = TTF_RenderUTF8_Blended(f, s, c);
+    SDL_Surface *surf = TTF_RenderUTF8_Blended(f, s, color);
     if (!surf) return;
     SDL_Texture *tex = SDL_CreateTextureFromSurface(ui->renderer, surf);
     if (tex) {
@@ -90,12 +166,12 @@ void ui_text(ui_t *ui, TTF_Font *f, const char *s, int x, int y, SDL_Color c)
 }
 
 void ui_text_center(ui_t *ui, TTF_Font *f, const char *s, int y, int w,
-                    SDL_Color c)
+                    SDL_Color color)
 {
     if (!s || !*s) return;
     int tw = 0, th = 0;
     TTF_SizeUTF8(f, s, &tw, &th);
-    ui_text(ui, f, s, (w - tw) / 2, y, c);
+    ui_text(ui, f, s, (w - tw) / 2, y, color);
     (void)th;
 }
 
@@ -201,11 +277,24 @@ bool ui_handle_event(ui_t *ui, const SDL_Event *e)
 
 void ui_tick(ui_t *ui)
 {
+    if (ui->poll_thread) {
+        SDL_LockMutex(ui->poll_mutex);
+        if (ui->poll_fresh) {
+            ui->status = ui->poll_status;
+            ui->poll_fresh = false;
+            ui->last_status_ms = SDL_GetTicks();
+        }
+        SDL_UnlockMutex(ui->poll_mutex);
+        return;
+    }
+
+    /* Fallback synchrone si le thread n'a pas pu demarrer. */
     Uint32 now = SDL_GetTicks();
     int interval_ms = ui->cfg->poll_interval_s * 1000;
     if (interval_ms < 500) interval_ms = 500;
     if (now - ui->last_poll_ms >= (Uint32)interval_ms) {
         prusa_get_status(ui->cfg->url, ui->cfg->api_key, &ui->status);
         ui->last_poll_ms = now;
+        ui->last_status_ms = now;
     }
 }

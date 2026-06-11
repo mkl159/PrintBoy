@@ -7,7 +7,7 @@
 # Le binaire produit s'appelle 'printboy' et va dans build/.
 
 TARGET   := printboy
-VERSION  := 0.1.0
+VERSION  := 0.3.0
 
 SRCDIR   := src
 BUILDDIR := build
