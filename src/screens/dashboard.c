@@ -42,6 +42,14 @@ void screen_dashboard_render(ui_t *ui)
     ui_text_center(ui, ui->font_large, prusa_state_label(s->state), 40, 640,
                    stateColor);
 
+    /* Fraicheur des donnees (le poll est asynchrone) */
+    if (ui->last_status_ms) {
+        char age[32];
+        Uint32 age_s = (SDL_GetTicks() - ui->last_status_ms) / 1000;
+        snprintf(age, sizeof(age), "maj %lus", (unsigned long)age_s);
+        ui_text(ui, ui->font_small, age, 560, 40, C_DIM);
+    }
+
     /* Panneau temperatures */
     ui_box(ui, 20, 100, 280, 140, C_PANEL);
     ui_text(ui, ui->font_small, "BUSE", 30, 108, C_DIM);

@@ -1,5 +1,26 @@
 # 📝 Changelog
 
+## [0.3.0] - 2026-06-11
+
+### ✨ Ajouts
+
+- 🧵 **Polling asynchrone** : le `GET /api/v1/status` tourne dans un thread SDL dédié. L'UI ne gèle plus jamais (avant : jusqu'à 10 s de freeze à chaque poll si l'imprimante ne répondait pas). Fallback synchrone si le thread ne démarre pas.
+- 🛑 **Confirmation avant annulation** : « Annuler l'impression » demande un **double appui sur A** dans les 3 s (le bouton devient rouge). Fini l'impression de 8 h ruinée par un appui accidentel.
+- 🔥 **Préchauffage PETG** (230/85) en plus du PLA
+- 📷 **Webcam : ratio d'aspect préservé** (letterbox centré au lieu d'étirer l'image en 560×360)
+- ⏱️ **Indicateur de fraîcheur** sur le Dashboard (« maj Ns ») — utile maintenant que le poll est asynchrone
+- 🏷️ **Version affichée** dans l'écran Settings
+
+### 🔒 Sécurité / robustesse
+
+- 🧷 `CURLOPT_NOSIGNAL` activé : obligatoire en multi-thread (sans ça, les timeouts DNS de libcurl utilisent `SIGALRM` et peuvent tuer le process)
+- 🔁 Redirections HTTP **bornées** (`MAXREDIRS=3`) et **limitées à http/https** (un serveur malveillant ne peut plus rediriger vers `file://` ou autre)
+- 🔐 Les écritures de config (URL/clé) sont protégées par mutex (le thread de poll les lit)
+
+### 🐛 Corrections
+
+- 🕹️ L'écran Jog affichait littéralement `nan` pour X/Y quand Prusa-Link ne les rapporte pas (cas fréquent) → affiche `--`
+
 ## [0.2.0] - 2026-06-02
 
 ### ✨ Ajouts

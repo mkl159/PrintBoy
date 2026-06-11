@@ -30,8 +30,10 @@ PrintBoy s'exécute :
 
 ### Spécifiques PrintBoy
 
-- 🟡 **Pas de validation TLS** : libcurl est appelée avec ses défauts (vérification CA système). Si Prusa-Link expose un certificat self-signed, l'utilisateur doit l'ajouter au store système ou ça échoue. **On ne désactive PAS `CURLOPT_SSL_VERIFYPEER`** (contrairement à Telmi-Sync — cf audit B-SEC-02 dans `../Audit_Repos/Telmi-Sync_audit.txt`).
+- 🟡 **Pas de validation TLS** : libcurl est appelée avec ses défauts (vérification CA système). Si Prusa-Link expose un certificat self-signed, l'utilisateur doit l'ajouter au store système ou ça échoue. **On ne désactive PAS `CURLOPT_SSL_VERIFYPEER`**.
 - 🟡 **L'image JPEG webcam est entièrement chargée en mémoire** (jusqu'à 4 MiB). Sur Miyoo (128 MiB RAM) c'est ok, mais une caméra compromise pourrait DoS via taille (limité par `MAX_BODY_BYTES` dans `http.c`).
+- ✅ **Redirections HTTP bornées** (depuis v0.3.0) : `MAXREDIRS=3` et protocoles restreints à `http`/`https` — un serveur compromis ne peut pas rediriger le client vers `file://` ou un autre schéma.
+- ✅ **`CURLOPT_NOSIGNAL`** activé (depuis v0.3.0) : requis pour le polling threadé, évite que `SIGALRM` (timeout DNS) tue le process.
 
 ## 📢 Signaler une vuln
 

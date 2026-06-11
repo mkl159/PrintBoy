@@ -70,7 +70,20 @@ void screen_webcam_render(ui_t *ui)
     }
 
     if (cached_tex) {
+        /* Fit dans 560x360 en conservant le ratio (letterbox centre). */
         SDL_Rect dst = {40, 50, 560, 360};
+        int tw = 0, th = 0;
+        SDL_QueryTexture(cached_tex, NULL, NULL, &tw, &th);
+        if (tw > 0 && th > 0) {
+            float sx = 560.f / (float)tw;
+            float sy = 360.f / (float)th;
+            float sc = (sx < sy) ? sx : sy;
+            dst.w = (int)((float)tw * sc);
+            dst.h = (int)((float)th * sc);
+            dst.x = 40 + (560 - dst.w) / 2;
+            dst.y = 50 + (360 - dst.h) / 2;
+        }
+        ui_box(ui, 40, 50, 560, 360, C_PANEL);
         SDL_RenderCopy(ui->renderer, cached_tex, NULL, &dst);
         ui_box_outline(ui, 40, 50, 560, 360, C_PANEL);
     } else {

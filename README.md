@@ -36,11 +36,12 @@ PrintBoy est une **app Onion** pour Miyoo Mini Plus qui parle à l'API REST de *
 
 - 📊 **Dashboard temps réel** : état (IDLE / PRINTING / PAUSED / ERROR), températures buse + plateau, position X/Y/Z, ventilos, flow, speed
 - 📈 **Progression d'impression** : nom du fichier, barre %, temps restant, temps écoulé
-- 📷 **Webcam** : snapshot JPEG via `/api/v1/cameras/{id}/snap`, rafraîchi auto toutes les 5 s, avec **découverte auto de la caméra** (`/api/v1/cameras`) si le status n'en expose pas
-- ⏸️ **Pause / Reprendre / Annuler** un job
+- 🧵 **UI toujours fluide** : le poll de status tourne dans un thread dédié — l'interface ne gèle jamais, même imprimante injoignable
+- 📷 **Webcam** : snapshot JPEG via `/api/v1/cameras/{id}/snap`, rafraîchi auto toutes les 5 s, ratio préservé, avec **découverte auto de la caméra** (`/api/v1/cameras`) si le status n'en expose pas
+- ⏸️ **Pause / Reprendre / Annuler** un job — l'annulation demande une **confirmation** (double appui A) pour éviter les drames
 - 🏠 **Home XYZ** d'un bouton
 - 🌡️ **Régler les températures** buse **et** plateau par paliers de ±5 °C
-- 🔥 **Préchauffage PLA** (215/60) en un appui, et **Refroidir tout** (buse + plateau à 0 °C)
+- 🔥 **Préchauffage PLA** (215/60) et **PETG** (230/85) en un appui, et **Refroidir tout** (buse + plateau à 0 °C)
 - 🕹️ **Jog manuel** XYZ avec pas 1 / 10 / 50 mm — le pas par défaut est repris depuis `printer.cfg`
 - 🔐 **Sauvegarde** locale de l'URL + clé API (dans `printer.cfg`)
 - 🚪 **Déconnexion** propre depuis l'écran Settings (efface URL + clé)

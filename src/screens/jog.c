@@ -1,6 +1,7 @@
 /* Ecran 3 : Jog XYZ. */
 #include "screens.h"
 
+#include <math.h>
 #include <stdio.h>
 
 static int jog_step_idx = -1;  /* -1 = a initialiser depuis la config */
@@ -27,8 +28,14 @@ void screen_jog_render(ui_t *ui)
     /* Position courante */
     const prusa_status_t *s = &ui->status;
     char buf[96];
-    snprintf(buf, sizeof(buf), "X %.1f   Y %.1f   Z %.2f",
-             s->axis_x, s->axis_y, s->axis_z);
+    /* Prusa-Link ne rapporte souvent pas X/Y (seulement Z) : afficher
+     * "--" plutot que "nan". */
+    if (isnan(s->axis_x) || isnan(s->axis_y)) {
+        snprintf(buf, sizeof(buf), "X --   Y --   Z %.2f", s->axis_z);
+    } else {
+        snprintf(buf, sizeof(buf), "X %.1f   Y %.1f   Z %.2f",
+                 s->axis_x, s->axis_y, s->axis_z);
+    }
     ui_text_center(ui, ui->font_medium, buf, 80, 640, C_FG);
 
     /* Pas */

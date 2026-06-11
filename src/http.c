@@ -87,6 +87,19 @@ static http_response_t do_request(const char *base_url, const char *path,
     curl_easy_setopt(c, CURLOPT_CONNECTTIMEOUT, 5L);
     curl_easy_setopt(c, CURLOPT_TIMEOUT, 10L);
     curl_easy_setopt(c, CURLOPT_FOLLOWLOCATION, 1L);
+    /* Redirections : bornees et limitees a http(s). Sans ca, un serveur
+     * malveillant pourrait rediriger vers file:// ou autre schema. */
+    curl_easy_setopt(c, CURLOPT_MAXREDIRS, 3L);
+#if CURL_AT_LEAST_VERSION(7, 85, 0)
+    curl_easy_setopt(c, CURLOPT_REDIR_PROTOCOLS_STR, "http,https");
+#else
+    curl_easy_setopt(c, CURLOPT_REDIR_PROTOCOLS,
+                     CURLPROTO_HTTP | CURLPROTO_HTTPS);
+#endif
+    /* Obligatoire en multi-thread : sans NOSIGNAL, les timeouts DNS de
+     * libcurl utilisent SIGALRM et peuvent tuer le process quand les
+     * requetes partent d'un thread secondaire (cf. poll thread dans ui.c). */
+    curl_easy_setopt(c, CURLOPT_NOSIGNAL, 1L);
     curl_easy_setopt(c, CURLOPT_USERAGENT, "PrintBoy/0.1");
 
     if (strcmp(method, "POST") == 0) {

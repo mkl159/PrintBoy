@@ -3,13 +3,17 @@
 
 #include <stdio.h>
 
-#define NUM_ACTIONS 9
+#define NUM_ACTIONS 10
 
 /* Presets de prechauffage (buse, plateau) en degres C. */
 #define PREHEAT_PLA_NOZZLE  215
 #define PREHEAT_PLA_BED      60
 #define PREHEAT_PETG_NOZZLE 230
 #define PREHEAT_PETG_BED     85
+
+/* Annuler = destructif : double appui sur A requis dans les 3 secondes. */
+#define CONFIRM_WINDOW_MS 3000
+static Uint32 confirm_cancel_until = 0;
 
 static const char *labels[NUM_ACTIONS] = {
     "Pause / Reprendre",
@@ -20,24 +24,27 @@ static const char *labels[NUM_ACTIONS] = {
     "Plateau +5 C",
     "Plateau -5 C",
     "Prechauffer PLA (215/60)",
+    "Prechauffer PETG (230/85)",
     "Refroidir tout (0/0)",
 };
 
 void screen_controls_render(ui_t *ui)
 {
-    ui_text_center(ui, ui->font_medium, "CONTROLE DU JOB", 36, 640, C_ACCENT);
+    ui_text_center(ui, ui->font_medium, "CONTROLE DU JOB", 34, 640, C_ACCENT);
 
-    int y = 70;
+    bool confirming = SDL_GetTicks() < confirm_cancel_until;
+    int y = 62;
     for (int i = 0; i < NUM_ACTIONS; i++) {
-        SDL_Color bg = (i == ui->cursor) ? C_ACCENT : C_PANEL;
+        bool is_confirm = (i == 1 && confirming);
+        SDL_Color bg = (i == ui->cursor)
+                       ? (is_confirm ? C_ERR : C_ACCENT) : C_PANEL;
         SDL_Color fg = (i == ui->cursor) ? C_BG : C_FG;
-        ui_box(ui, 60, y, 520, 36, bg);
-        ui_text(ui, ui->font_medium, labels[i], 80, y + 5, fg);
-        y += 42;
+        const char *label = is_confirm
+                            ? "Confirmer l'annulation ? (A)" : labels[i];
+        ui_box(ui, 60, y, 520, 32, bg);
+        ui_text(ui, ui->font_medium, label, 80, y + 4, fg);
+        y += 38;
     }
-
-    ui_text_center(ui, ui->font_small,
-        "Haut/Bas : choisir   A : executer", 444, 640, C_DIM);
 }
 
 static void do_action(ui_t *ui, int idx)
@@ -68,6 +75,13 @@ static void do_action(ui_t *ui, int idx)
             if (st->job_id > 0 &&
                 (st->state == PRUSA_STATE_PRINTING ||
                  st->state == PRUSA_STATE_PAUSED)) {
+                if (SDL_GetTicks() >= confirm_cancel_until) {
+                    confirm_cancel_until = SDL_GetTicks() + CONFIRM_WINDOW_MS;
+                    ui_show_message(ui,
+                        "Appuie encore sur A pour confirmer l'annulation.");
+                    break;
+                }
+                confirm_cancel_until = 0;
                 if (prusa_job_cancel(c->url, c->api_key, st->job_id))
                     ui_show_message(ui, "Annulation demandee.");
                 else
@@ -124,6 +138,15 @@ static void do_action(ui_t *ui, int idx)
             break;
         }
         case 8: {
+            bool a = prusa_set_nozzle(c->url, c->api_key, PREHEAT_PETG_NOZZLE);
+            bool b = prusa_set_bed(c->url, c->api_key, PREHEAT_PETG_BED);
+            if (a && b)
+                ui_show_message(ui, "Prechauffage PETG (230/85).");
+            else
+                ui_show_message(ui, "Erreur prechauffage.");
+            break;
+        }
+        case 9: {
             bool a = prusa_set_nozzle(c->url, c->api_key, 0);
             bool b = prusa_set_bed(c->url, c->api_key, 0);
             if (a && b)
@@ -141,9 +164,11 @@ bool screen_controls_event(ui_t *ui, const SDL_Event *e)
     switch (e->key.keysym.sym) {
         case SDLK_UP:
             ui->cursor = (ui->cursor + NUM_ACTIONS - 1) % NUM_ACTIONS;
+            confirm_cancel_until = 0;  /* bouger annule la confirmation */
             break;
         case SDLK_DOWN:
             ui->cursor = (ui->cursor + 1) % NUM_ACTIONS;
+            confirm_cancel_until = 0;
             break;
         case SDLK_SPACE:  /* A */
         case SDLK_RETURN:
